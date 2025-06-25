@@ -6,7 +6,7 @@ const ctx = createContext();
 
 export function ViewProvider(props) {
   const s = (() => {
-    const [view, setView] = createSignal("pick");
+    const [view, setView] = createSignal("");
     const [busyExiting, setBusyExiting] = createSignal("");
 
     return {

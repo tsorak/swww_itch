@@ -19,7 +19,7 @@ export default function ContextWrapped() {
 function App() {
   const { isView: v, goto, signals: s } = useView();
 
-  // onMount(() => goto("pick"));
+  onMount(() => goto("pick"));
 
   return (
     <div class="flex flex-col w-screen h-screen">
