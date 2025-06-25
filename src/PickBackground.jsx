@@ -1,14 +1,5 @@
-import {
-  createResource,
-  For,
-  Show,
-  Suspense,
-  lazy,
-  onMount,
-  createSignal,
-} from "solid-js";
+import { createResource, For, createSignal } from "solid-js";
 import * as tapi from "@tauri-apps/api";
-import * as fs from "@tauri-apps/plugin-fs";
 
 import { default as Background, background } from "./components/Background";
 import { useView } from "./context/view";
@@ -18,7 +9,7 @@ export default function Comp() {
 
   const bgs = createSignal(new Array(8).fill(null));
 
-  const [backgrounds] = createResource(bgs, async ([_, set]) => {
+  createResource(bgs, async ([_, set]) => {
     console.log("Waiting for routing...");
     await signals.isRouting.get();
     console.log("Loading background paths...");
@@ -44,6 +35,7 @@ export default function Comp() {
 function PickBg({ name }) {
   const onClick = () => {
     console.log(`Clicked on ${name}`);
+    tapi.core.invoke("set_background", { name });
   };
 
   return (
