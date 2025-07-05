@@ -1,7 +1,27 @@
-# Tauri + Solid
+# swwwitch
 
-This template should help get you started developing with Tauri and Solid in Vite.
+## Usage
 
-## Recommended IDE Setup
+- #1
 
-- [VS Code](https://code.visualstudio.com/) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
+**Hyprland**
+
+```
+# ~/.config/hypr/hyprland.conf
+exec-once = swww-daemon
+exec-once = swww-itchd
+```
+
+- #2
+
+Run swwwitch to open the configuration window
+
+## Application components
+
+### swww-itchd
+
+Queues wallpapers
+
+### swwwitch
+
+Desktop application for managing the wallpaper queue and applying them.
