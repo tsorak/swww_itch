@@ -1,3 +1,17 @@
-fn main() {
+use swww_itch_lib::unix_socket::{Message, listen};
+
+mod cleanup;
+
+#[tokio::main]
+async fn main() {
     println!("Hello, world!");
+
+    cleanup::bind_signals();
+
+    let mut listener = listen().unwrap();
+
+    println!("Waiting for messages");
+    while let Some(_msg) = listener.recv::<Message>().await {
+        println!("Received message");
+    }
 }

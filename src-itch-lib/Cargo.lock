@@ -274,14 +274,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "swww-itchd"
-version = "0.1.0"
-dependencies = [
- "swww_itch_lib",
- "tokio",
-]
-
-[[package]]
 name = "swww_itch_lib"
 version = "0.1.0"
 dependencies = [
