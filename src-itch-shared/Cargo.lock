@@ -274,7 +274,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "swww_itch_lib"
+name = "swww_itch_shared"
 version = "0.1.0"
 dependencies = [
  "anyhow",

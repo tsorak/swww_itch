@@ -1,4 +1,7 @@
-use swww_itch_lib::unix_socket::{Message, listen};
+use swww_itch_shared::{
+    swww_ffi,
+    unix_socket::{Message, setup_listener},
+};
 
 mod cleanup;
 
@@ -6,10 +9,18 @@ mod cleanup;
 async fn main() {
     cleanup::bind_os_signals();
 
-    let mut listener = listen().unwrap();
+    let mut listener = setup_listener().await;
 
-    println!("Waiting for messages");
-    while let Some(_msg) = listener.recv::<Message>().await {
-        println!("Received message");
+    println!("Waiting for connections...");
+    loop {
+        if let Some(msg) = listener.recv::<Message>().await {
+            println!("Received job: {msg}");
+            match msg {
+                Message::SwitchToBackground(p) => {
+                    swww_ffi::set_background(&p);
+                }
+                _ => {}
+            }
+        }
     }
 }

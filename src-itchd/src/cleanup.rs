@@ -1,4 +1,4 @@
-use swww_itch_lib::unix_socket::socket_path;
+use swww_itch_shared::unix_socket::socket_path;
 use tokio::{
     select,
     signal::unix::{SignalKind, signal},

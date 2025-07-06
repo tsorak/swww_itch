@@ -4,5 +4,5 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-swww_itch_lib = { path = "../src-itch-lib" }
+swww_itch_shared = { path = "../src-itch-shared" }
 tokio = { version = "1.46.1", features = ["full"] }

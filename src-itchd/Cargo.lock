@@ -277,12 +277,12 @@ dependencies = [
 name = "swww-itchd"
 version = "0.1.0"
 dependencies = [
- "swww_itch_lib",
+ "swww_itch_shared",
  "tokio",
 ]
 
 [[package]]
-name = "swww_itch_lib"
+name = "swww_itch_shared"
 version = "0.1.0"
 dependencies = [
  "anyhow",
