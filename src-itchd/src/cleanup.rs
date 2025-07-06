@@ -4,7 +4,7 @@ use tokio::{
     signal::unix::{SignalKind, signal},
 };
 
-pub fn bind_signals() {
+pub fn bind_os_signals() {
     tokio::spawn(async {
         let mut sigterm = signal(SignalKind::terminate()).unwrap();
         let mut sigint = signal(SignalKind::interrupt()).unwrap();

@@ -4,9 +4,7 @@ mod cleanup;
 
 #[tokio::main]
 async fn main() {
-    println!("Hello, world!");
-
-    cleanup::bind_signals();
+    cleanup::bind_os_signals();
 
     let mut listener = listen().unwrap();
 
