@@ -1,7 +1,7 @@
-import { createResource, For, createSignal } from "solid-js";
+import { createResource, createSignal, For } from "solid-js";
 import * as tapi from "@tauri-apps/api";
 
-import { default as Background, background } from "./components/Background";
+import { background, default as Background } from "./components/Background";
 import { useView } from "./context/view";
 
 export default function Comp() {
@@ -55,6 +55,12 @@ const NoBackgroundsFound = () => {
       No backgrounds found.
       <br />
       Check that {HOME}/backgrounds/ exists and contain readable images.
+      <button
+        type="button"
+        onClick={() => tapi.core.invoke("set_background", { name: "lul.jpg" })}
+      >
+        Test bg
+      </button>
     </h2>
   );
 };

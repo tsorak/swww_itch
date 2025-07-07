@@ -1,13 +1,12 @@
-use std::sync::Mutex;
 use tauri::State;
+use tokio::sync::Mutex;
 
-use swww_itch_shared::unix_socket::{self, Message};
+use swww_itch_shared::unix_socket::{self, Request, Response};
 
 mod api;
 
-#[derive(Default)]
 struct AppState {
-    pub itchd_socket: unix_socket::UnixSocket,
+    pub itchd_socket: unix_socket::UnixSocket<Request, Response>,
 }
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
@@ -17,31 +16,49 @@ fn greet(name: &str) -> String {
 }
 
 #[tauri::command]
-fn set_background(state: State<'_, Mutex<AppState>>, name: &str) -> Result<bool, bool> {
-    let unchecked_path = api::quick_switch::background::canonicalize(name).map_err(|_| false)?;
+fn set_background(state: State<'_, Mutex<AppState>>, name: &str) -> anyhow::Result<bool, String> {
+    let unchecked_path =
+        api::quick_switch::background::canonicalize(name).map_err(|err| err.to_string())?;
 
     let path = match unchecked_path.try_exists() {
         Ok(true) => Ok(unchecked_path),
-        _ => Err(false),
+        _ => Err("Specified background does not exist"),
     }?;
 
-    let path = path.to_str().ok_or(false)?.to_string();
+    let path = path
+        .to_str()
+        .ok_or("Path contains invalid characters".to_string())?
+        .to_string();
 
-    let mut lock = state.lock().unwrap();
     tauri::async_runtime::block_on(async move {
-        let _ = lock
-            .itchd_socket
-            .send(Message::SwitchToBackground(path))
-            .await;
-    });
+        let mut lock = state.lock().await;
 
-    Ok(true)
+        let conn = lock
+            .itchd_socket
+            .connection
+            .as_mut()
+            .ok_or("Not connected")?;
+
+        conn.send_request(Request::SwitchToBackground(path))
+            .map_err(|err| err.to_string())?;
+
+        let Response::SwitchToBackground(b) = conn
+            .take_response(|r| matches!(r, Response::SwitchToBackground(_)))
+            .await
+        else {
+            unreachable!()
+        };
+
+        Ok(b)
+    })
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let mut app_state = AppState::default();
-    let _ = app_state.itchd_socket.connect();
+    let app_state = AppState {
+        // Wrapped in a block_on to create a runtime for tokio calls down the callstack
+        itchd_socket: tauri::async_runtime::block_on(async { unix_socket::connect() }),
+    };
 
     tauri::Builder::default()
         .manage(Mutex::new(app_state))

@@ -13,14 +13,25 @@ pub fn socket_path() -> Result<PathBuf, VarError> {
 }
 
 #[derive(Serialize, Deserialize)]
-pub enum Message {
+#[serde(rename_all = "camelCase")]
+pub enum Request {
     SwitchToBackground(String),
     EditQueue,
 }
 
+#[derive(Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub enum Response {
+    SwitchToBackground(bool),
+    EditQueue(bool),
+}
+
 /// Resolves once the listener is successfully bound.
-pub async fn setup_listener() -> UnixSocket {
-    let mut socket = UnixSocket::default();
+pub async fn setup_listener<REQ>() -> UnixSocket<REQ, ()>
+where
+    REQ: Serialize + for<'de> Deserialize<'de> + Send + 'static,
+{
+    let mut socket = UnixSocket::new(None, None);
     while !socket.can_recv() {
         match socket.listen() {
             Ok(_) => {
@@ -36,13 +47,16 @@ pub async fn setup_listener() -> UnixSocket {
     socket
 }
 
-pub fn connect() -> UnixSocket {
-    let mut socket = UnixSocket::default();
+pub fn connect<
+    REQ: Serialize + for<'de> Deserialize<'de> + Send + 'static,
+    RES: for<'de> Deserialize<'de> + Clone + Send + 'static,
+>() -> UnixSocket<REQ, RES> {
+    let mut socket = UnixSocket::new(None, None);
     let _ = socket.connect();
     socket
 }
 
-impl std::fmt::Display for Message {
+impl std::fmt::Display for Request {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::SwitchToBackground(p) => {
