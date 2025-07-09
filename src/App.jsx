@@ -7,6 +7,7 @@ import T from "./components/Transition";
 
 import Dev from "./Dev";
 import SwitchBackground from "./PickBackground";
+import Queue from "./Queue";
 
 export default function ContextWrapped() {
   return (
@@ -43,7 +44,7 @@ function App() {
             <Abs c={<SwitchBackground />} />
           </Show>
           <Show when={v("queue")}>
-            <Abs c={"WIP"} />
+            <Abs c={<Queue />} />
           </Show>
         </T>
       </div>

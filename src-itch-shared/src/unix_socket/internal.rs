@@ -153,9 +153,7 @@ impl<REQ: Serialize + Send + 'static, RES: for<'de> Deserialize<'de> + Clone + S
                     if let Ok(Message::Response(res)) = serde_json::from_str::<Message<(), RES>>(&s)
                     {
                         match res_tx.send(res) {
-                            Ok(_) => {
-                                println!("Transmitted response");
-                            }
+                            Ok(_) => {}
                             Err(_) => {
                                 eprintln!("Received response from peer which we didn't handle");
                             }
