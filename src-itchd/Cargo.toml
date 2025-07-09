@@ -1,8 +1,9 @@
 [package]
-name = "swww_itchd"
+name = "swww-itchd"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
 swww_itch_shared = { path = "../src-itch-shared" }
-tokio = { version = "1.46.1", features = ["full"] }
+tokio.workspace = true
+anyhow.workspace = true

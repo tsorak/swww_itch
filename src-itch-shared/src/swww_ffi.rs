@@ -1,6 +1,6 @@
-use std::process::Command;
+use tokio::process::Command;
 
-pub fn set_background(path: &str) -> bool {
+pub async fn set_background(path: &str) -> bool {
     Command::new("swww")
         .args([
             "img",
@@ -11,6 +11,7 @@ pub fn set_background(path: &str) -> bool {
             "any",
         ])
         .status()
+        .await
         .map(|status| status.success())
         .unwrap_or(false)
 }

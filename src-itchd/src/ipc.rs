@@ -1,0 +1,24 @@
+use swww_itch_shared::unix_socket::{Request, Response, setup_listener};
+
+use crate::wallpaper_queue::WallpaperQueue;
+
+pub async fn run(wq: WallpaperQueue) {
+    let mut listener = setup_listener().await;
+
+    println!("[ipc.rs]: Waiting for connections...");
+    loop {
+        if let Some(mut c) = listener.recv().await {
+            match c.take_request() {
+                Request::SwitchToBackground(p) => {
+                    println!(r#"Received job: SwitchToBackground("{p}")"#);
+
+                    let success = wq.switch_to_wallpaper(&p).await.is_ok();
+                    let _ = c
+                        .respond(Response::SwitchToBackground(success))
+                        .inspect_err(|err| eprintln!("Failed to send response: {err}"));
+                }
+                _ => {}
+            }
+        }
+    }
+}

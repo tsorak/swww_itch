@@ -34,8 +34,12 @@ export default function Comp() {
 
 function PickBg({ name }) {
   const onClick = () => {
-    console.log(`Clicked on ${name}`);
-    tapi.core.invoke("set_background", { name });
+    const success = tapi.core.invoke("set_background", { name }).await;
+    if (success) {
+      console.log(`Background ${name} set successfully.`);
+    } else {
+      console.warn(`Failed to set background ${name}.`);
+    }
   };
 
   return (

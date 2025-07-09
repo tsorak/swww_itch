@@ -3436,7 +3436,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "swww_itch"
+name = "swww-itch"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -3451,6 +3451,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "swww-itchd"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "swww_itch_shared",
+ "tokio",
+]
+
+[[package]]
 name = "swww_itch_shared"
 version = "0.1.0"
 dependencies = [
@@ -3458,14 +3467,6 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror 2.0.12",
- "tokio",
-]
-
-[[package]]
-name = "swww_itchd"
-version = "0.1.0"
-dependencies = [
- "swww_itch_shared",
  "tokio",
 ]
 

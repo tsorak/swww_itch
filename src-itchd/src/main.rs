@@ -1,29 +1,35 @@
-use swww_itch_shared::{
-    swww_ffi,
-    unix_socket::{Request, Response, setup_listener},
-};
+use anyhow::anyhow;
 
 mod cleanup;
+mod ipc;
+mod wallpaper_queue;
+
+use wallpaper_queue::WallpaperQueue;
 
 #[tokio::main]
-async fn main() {
+async fn main() -> anyhow::Result<()> {
     cleanup::bind_os_signals();
 
-    let mut listener = setup_listener().await;
+    let bg_dir = std::env::home_dir()
+        .ok_or(anyhow!("Could not get home directory"))?
+        .join("backgrounds");
 
-    println!("Waiting for connections...");
-    loop {
-        if let Some(mut c) = listener.recv().await {
-            match c.take_request() {
-                Request::SwitchToBackground(p) => {
-                    println!(r#"Received job: SwitchToBackground("{p}")"#);
-                    let success = swww_ffi::set_background(&p);
-                    let _ = c
-                        .respond(Response::SwitchToBackground(success))
-                        .inspect_err(|err| eprintln!("Failed to send response: {err}"));
-                }
-                _ => {}
-            }
-        }
+    let wallpaper_queue = WallpaperQueue::builder()
+        .with_initial_queue_from_directory(&bg_dir)
+        .await
+        .dbg()
+        .build();
+
+    let args: Vec<String> = std::env::args().collect();
+    if let Some(bg) = args.get(1).map(|s| s.to_string()) {
+        let wq = wallpaper_queue.clone();
+        tokio::spawn(async move {
+            tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
+            let _ = wq.switch_to_wallpaper(&bg).await;
+        });
     }
+
+    ipc::run(wallpaper_queue).await;
+
+    Ok(())
 }
