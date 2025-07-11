@@ -35,6 +35,15 @@ pub async fn run(wq: WallpaperQueue) {
                         ))
                         .inspect_err(|err| eprintln!("Failed to send response: {err}"));
                 }
+                Request::GetQueue => {
+                    println!("Received job: GetQueue");
+
+                    let queue = wq.get_queue().await;
+
+                    let _ = c
+                        .respond(Response::GetQueue(queue))
+                        .inspect_err(|err| eprintln!("Failed to send response: {err}"));
+                }
             }
         }
     }

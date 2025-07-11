@@ -16,6 +16,29 @@ fn greet(name: &str) -> String {
 }
 
 #[tauri::command]
+async fn get_queue(state: State<'_, Mutex<AppState>>) -> Result<Vec<String>, String> {
+    let mut lock = state.lock().await;
+
+    let conn = lock
+        .itchd_socket
+        .connection
+        .as_mut()
+        .ok_or("Not connected")?;
+
+    conn.send_request(Request::GetQueue)
+        .map_err(|err| err.to_string())?;
+
+    let Response::GetQueue(queue) = conn
+        .take_response(|r| matches!(r, Response::GetQueue(_)))
+        .await
+    else {
+        unreachable!()
+    };
+
+    Ok(queue)
+}
+
+#[tauri::command]
 fn set_background(state: State<'_, Mutex<AppState>>, name: &str) -> anyhow::Result<bool, String> {
     let unchecked_path =
         api::quick_switch::background::canonicalize(name).map_err(|err| err.to_string())?;
@@ -113,7 +136,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             greet,
             set_background,
-            rearrange_background
+            rearrange_background,
+            get_queue
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

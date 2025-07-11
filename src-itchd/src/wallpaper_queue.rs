@@ -53,6 +53,10 @@ impl WallpaperQueue {
         }
     }
 
+    pub async fn get_queue(&self) -> Vec<String> {
+        self.queue.lock().await.v.to_owned()
+    }
+
     pub async fn switch_to_wallpaper(&self, bg: &str) -> anyhow::Result<()> {
         let lock = self.queue.lock().await;
 

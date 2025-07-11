@@ -17,6 +17,7 @@ pub fn socket_path() -> Result<PathBuf, VarError> {
 pub enum Request {
     SwitchToBackground(String),
     RearrangeBackground((String, String, String)),
+    GetQueue,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -24,6 +25,7 @@ pub enum Request {
 pub enum Response {
     SwitchToBackground(bool),
     RearrangeBackground((bool, usize, usize)),
+    GetQueue(Vec<String>),
 }
 
 /// Resolves once the listener is successfully bound.

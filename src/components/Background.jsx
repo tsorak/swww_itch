@@ -43,7 +43,7 @@ const blobWorker = {
 };
 
 export const background = {
-  async list() {
+  async list_from_fs() {
     let entries;
     try {
       const path = await tapi.path.join(await HOME, "backgrounds");
@@ -61,8 +61,17 @@ export const background = {
     return backgrounds;
   },
 
+  async list() {
+    try {
+      return await tapi.core.invoke("get_queue", {});
+    } catch (_error) {
+      console.warn("Failed to get queued backgrounds");
+      return [];
+    }
+  },
+
   async blob(path) {
-    path = await tapi.path.join(await HOME, "backgrounds", path);
+    // path = await tapi.path.join(await HOME, "backgrounds", path);
 
     const job = async () => {
       const data = await fs.readFile(path);
