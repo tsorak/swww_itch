@@ -17,7 +17,24 @@ pub async fn run(wq: WallpaperQueue) {
                         .respond(Response::SwitchToBackground(success))
                         .inspect_err(|err| eprintln!("Failed to send response: {err}"));
                 }
-                _ => {}
+                Request::RearrangeBackground((bg, before_or_after, target_bg)) => {
+                    println!(
+                        r#"Received job: RearrangeBackground("{bg}", "{before_or_after}", "{target_bg}")"#
+                    );
+
+                    let response = wq
+                        .rearrange_wallpaper(&bg, &before_or_after, &target_bg)
+                        .await
+                        .map(|(move_index, to_index)| (true, move_index, to_index));
+
+                    let _ = c
+                        .respond(Response::RearrangeBackground(
+                            response
+                                .inspect_err(|err| eprintln!("Failed to rearrange: {err}"))
+                                .unwrap_or((false, 0, 0)),
+                        ))
+                        .inspect_err(|err| eprintln!("Failed to send response: {err}"));
+                }
             }
         }
     }

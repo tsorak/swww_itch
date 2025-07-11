@@ -49,7 +49,7 @@ export default function Comp() {
     console.log("Background paths loaded.");
   });
 
-  function rearrange(name, [beforeOrAfter, targetName]) {
+  async function rearrange(name, [beforeOrAfter, targetName]) {
     if (
       !name ||
       !targetName ||
@@ -58,15 +58,28 @@ export default function Comp() {
     )
       return;
 
-    bgs[1]((prev) => {
-      const updated = arr.moveElement(prev, name, targetName, beforeOrAfter);
-      console.log("updated", updated);
-      if (!updated) return prev;
+    tapi.core
+      .invoke("rearrange_background", {
+        bg: name,
+        beforeOrAfter,
+        targetBg: targetName,
+      })
+      .then(({ moveIndex, toIndex }) => {
+        console.log(`${moveIndex} ${toIndex}`);
 
-      // TODO: tauri.invoke
+        if (moveIndex === toIndex) return null;
 
-      return updated;
-    });
+        bgs[1]((prev) => {
+          const updated = [...prev];
+          updated.splice(moveIndex, 1);
+          updated.splice(toIndex, 0, name);
+
+          return updated;
+        });
+      })
+      .catch((error) => {
+        console.error(error);
+      });
   }
 
   return (

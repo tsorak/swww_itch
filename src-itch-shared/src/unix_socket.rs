@@ -16,14 +16,14 @@ pub fn socket_path() -> Result<PathBuf, VarError> {
 #[serde(rename_all = "camelCase")]
 pub enum Request {
     SwitchToBackground(String),
-    EditQueue,
+    RearrangeBackground((String, String, String)),
 }
 
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub enum Response {
     SwitchToBackground(bool),
-    EditQueue(bool),
+    RearrangeBackground((bool, usize, usize)),
 }
 
 /// Resolves once the listener is successfully bound.
@@ -62,8 +62,11 @@ impl std::fmt::Display for Request {
             Self::SwitchToBackground(p) => {
                 write!(f, "SwitchToBackground '{p}'")
             }
-            Self::EditQueue => {
-                write!(f, "EditQueue")
+            Self::RearrangeBackground((bg, before_or_after, target)) => {
+                write!(
+                    f,
+                    "RearrangeBackground '{bg}' '{before_or_after}' '{target}'"
+                )
             }
         }
     }

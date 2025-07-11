@@ -97,7 +97,7 @@ impl Scheduler {
             swww_ffi::set_background(wallpaper).await;
         }
 
-        if *index == queue.v.len() - 1 {
+        if *index >= queue.v.len() - 1 {
             *index = 0;
         } else {
             *index += 1;
