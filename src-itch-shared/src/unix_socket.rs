@@ -55,19 +55,3 @@ pub fn connect<
     let _ = socket.connect();
     socket
 }
-
-impl std::fmt::Display for Request {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::SwitchToBackground(p) => {
-                write!(f, "SwitchToBackground '{p}'")
-            }
-            Self::RearrangeBackground((bg, before_or_after, target)) => {
-                write!(
-                    f,
-                    "RearrangeBackground '{bg}' '{before_or_after}' '{target}'"
-                )
-            }
-        }
-    }
-}
