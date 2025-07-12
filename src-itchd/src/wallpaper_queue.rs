@@ -10,9 +10,11 @@ use tokio::{
 };
 
 mod builder;
+mod iter;
 mod scheduler;
 
 pub use builder::WallpaperQueueBuilder;
+use iter::BackgroundIterable;
 use scheduler as sch;
 
 #[derive(Clone)]
@@ -55,16 +57,14 @@ impl WallpaperQueue {
     }
 
     pub async fn get_queue(&self) -> Vec<String> {
-        self.queue.lock().await.v.to_owned()
+        self.queue.lock().await.to_vec()
     }
 
     pub async fn switch_to_wallpaper(&self, bg: &str) -> anyhow::Result<()> {
         let lock = self.queue.lock().await;
 
         let bg_index = lock
-            .v
-            .iter()
-            .position(|v| v.as_str() == bg)
+            .get_index_of_bg(bg)
             .ok_or(anyhow!("Background is not in queue"))?;
 
         drop(lock);
@@ -86,22 +86,17 @@ impl WallpaperQueue {
         let mut lock = self.queue.lock().await;
 
         let queued_bg = lock
-            .v
-            .get(*i_lock)
+            .get_by_index(*i_lock)
             .expect("current_index should always point to an existing item")
             .to_owned();
         drop(i_lock);
 
         let bg_index = lock
-            .v
-            .iter()
-            .position(|v| v.ends_with(bg))
+            .get_index_of_bg(bg)
             .ok_or(anyhow!("Background is not in queue"))?;
 
         let mut target_index = lock
-            .v
-            .iter()
-            .position(|v| v.as_str().ends_with(target_bg))
+            .get_index_of_bg(target_bg)
             .ok_or(anyhow!("Target background is not in queue"))?;
 
         if bg_index == target_index {
@@ -127,24 +122,15 @@ impl WallpaperQueue {
             return Err(anyhow!("Refusing to move wallpaper to the same position"));
         }
 
-        let item = lock.v.remove(bg_index);
-        lock.v.insert(target_index, item);
+        let item = lock.remove(bg_index);
+        lock.insert(target_index, item);
 
         let mut i_lock = self.current_index.lock().await;
 
         // Update current_index
-        *i_lock = lock
-            .v
-            .iter()
-            .enumerate()
-            .find_map(|(i, v)| {
-                if v.as_str() == queued_bg.as_str() {
-                    Some(i)
-                } else {
-                    None
-                }
-            })
-            .expect("We have held the lock to queue, therefore queued_bg should be somewhere in the queue");
+        *i_lock = lock.get_index_of_bg(queued_bg).expect(
+            "We have held the lock to queue, therefore queued_bg should be somewhere in the queue",
+        );
 
         drop(lock);
 
