@@ -127,9 +127,15 @@ async fn rearrange_background(
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let unix_socket_path = unix_socket::UnixSocketPath::RuntimeDir("swwwitch.sock")
+        .to_pathbuf()
+        .expect("Could not get XDG_RUNTIME_DIR from env");
+
     let app_state = AppState {
         // Wrapped in a block_on to create a runtime for tokio calls down the callstack
-        itchd_socket: tauri::async_runtime::block_on(async { unix_socket::connect() }),
+        itchd_socket: tauri::async_runtime::block_on(async {
+            unix_socket::connect(unix_socket_path)
+        }),
     };
 
     tauri::Builder::default()

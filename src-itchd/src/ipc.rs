@@ -1,13 +1,11 @@
 use swww_itch_shared::{
     message::{Request, Response},
-    unix_socket::setup_listener,
+    unix_socket::UnixSocket,
 };
 
 use crate::wallpaper_queue::WallpaperQueue;
 
-pub async fn run(wq: WallpaperQueue) {
-    let mut listener = setup_listener().await;
-
+pub async fn run(mut listener: UnixSocket<Request, ()>, wq: WallpaperQueue) {
     println!("[ipc.rs]: Waiting for connections...");
     loop {
         if let Some(mut c) = listener.recv().await {

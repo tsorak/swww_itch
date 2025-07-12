@@ -1,25 +1,21 @@
-use std::{
-    env::{self, VarError},
-    path::PathBuf,
-};
-
 use serde::{Deserialize, Serialize};
+use std::path::Path;
 
 mod internal;
-pub use internal::{Listener, UnixSocket};
-
-pub fn socket_path() -> Result<PathBuf, VarError> {
-    Ok(PathBuf::from(env::var("XDG_RUNTIME_DIR")?).join("swwwitch.sock"))
-}
+mod setup;
+pub use self::{
+    internal::{Listener, UnixSocket},
+    setup::{IntoUnixSocketPath, UnixSocketPath},
+};
 
 /// Resolves once the listener is successfully bound.
-pub async fn setup_listener<REQ>() -> UnixSocket<REQ, ()>
+pub async fn setup_listener<REQ, P: AsRef<Path>>(listen_path: P) -> UnixSocket<REQ, ()>
 where
     REQ: Serialize + for<'de> Deserialize<'de> + Send + 'static,
 {
     let mut socket = UnixSocket::new(None, None);
     while !socket.can_recv() {
-        match socket.listen() {
+        match socket.listen(listen_path.as_ref()) {
             Ok(_) => {
                 break;
             }
@@ -36,8 +32,11 @@ where
 pub fn connect<
     REQ: Serialize + for<'de> Deserialize<'de> + Send + 'static,
     RES: for<'de> Deserialize<'de> + Clone + Send + 'static,
->() -> UnixSocket<REQ, RES> {
+    P: AsRef<Path>,
+>(
+    p: P,
+) -> UnixSocket<REQ, RES> {
     let mut socket = UnixSocket::new(None, None);
-    let _ = socket.connect();
+    let _ = socket.connect(p.as_ref());
     socket
 }

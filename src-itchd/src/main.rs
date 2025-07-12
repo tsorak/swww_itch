@@ -1,15 +1,16 @@
 use anyhow::anyhow;
 
+use swww_itch_shared::unix_socket::{UnixSocketPath, setup_listener};
+
 mod cleanup;
 mod ipc;
 mod wallpaper_queue;
 
+use cleanup::Cleanup;
 use wallpaper_queue::WallpaperQueue;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    cleanup::bind_os_signals();
-
     let bg_dir = std::env::home_dir()
         .ok_or(anyhow!("Could not get home directory"))?
         .join("backgrounds");
@@ -29,7 +30,13 @@ async fn main() -> anyhow::Result<()> {
         });
     }
 
-    ipc::run(wallpaper_queue).await;
+    let unix_socket_path = UnixSocketPath::RuntimeDir("swwwitch.sock").to_pathbuf()?;
+
+    let socket = setup_listener(&unix_socket_path).await;
+
+    Cleanup { unix_socket_path }.bind_os_signals();
+
+    ipc::run(socket, wallpaper_queue).await;
 
     Ok(())
 }

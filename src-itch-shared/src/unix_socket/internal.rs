@@ -2,6 +2,7 @@ use std::{
     fs,
     io::{Read, Write},
     os::unix::net::{UnixListener, UnixStream},
+    path::Path,
 };
 
 use serde::{Deserialize, Serialize};
@@ -9,8 +10,6 @@ use tokio::{
     sync::{broadcast, mpsc},
     task::spawn_blocking,
 };
-
-use super::socket_path;
 
 #[derive(Default)]
 pub struct UnixSocket<REQ, RES>
@@ -47,25 +46,21 @@ impl<
         }
     }
 
-    pub fn listen(&mut self) -> anyhow::Result<()> {
-        let socket_path = socket_path()?;
-        // ensure::runtime_dir(&socket_path)?;
+    pub fn listen<P: AsRef<Path>>(&mut self, p: P) -> anyhow::Result<()> {
+        let _ = fs::remove_file(p.as_ref());
 
-        let _ = fs::remove_file(&socket_path);
-
-        let listener = UnixListener::bind(socket_path)?;
+        let listener = UnixListener::bind(p.as_ref())?;
         let _ = self.listener.insert(Listener::new(listener));
 
         Ok(())
     }
 
-    pub fn connect(&mut self) -> anyhow::Result<()>
+    pub fn connect<P: AsRef<Path>>(&mut self, p: P) -> anyhow::Result<()>
     where
         REQ: Serialize + Send + 'static,
         RES: for<'de> Deserialize<'de> + Clone + Send + 'static,
     {
-        let socket_path = socket_path()?;
-        let stream = UnixStream::connect(socket_path)?;
+        let stream = UnixStream::connect(p.as_ref())?;
         let _ = self.connection.insert(Connection::<REQ, RES>::new(stream));
 
         Ok(())
