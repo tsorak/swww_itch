@@ -1,4 +1,7 @@
-use swww_itch_shared::unix_socket::{Request, Response, setup_listener};
+use swww_itch_shared::{
+    message::{Request, Response},
+    unix_socket::setup_listener,
+};
 
 use crate::wallpaper_queue::WallpaperQueue;
 

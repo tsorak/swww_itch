@@ -1,7 +1,10 @@
 use tauri::State;
 use tokio::sync::Mutex;
 
-use swww_itch_shared::unix_socket::{self, Request, Response};
+use swww_itch_shared::{
+    message::{Request, Response},
+    unix_socket,
+};
 
 mod api;
 
@@ -98,11 +101,11 @@ async fn rearrange_background(
         .as_mut()
         .ok_or("Not connected")?;
 
-    conn.send_request(Request::RearrangeBackground((
+    conn.send_request(Request::rearrange_background(
         bg,
         before_or_after,
         target_bg,
-    )))
+    )?)
     .map_err(|err| err.to_string())?;
 
     let Response::RearrangeBackground((ok, move_index, to_index)) = conn

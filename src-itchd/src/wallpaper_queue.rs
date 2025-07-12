@@ -3,6 +3,7 @@
 use std::sync::Arc;
 
 use anyhow::anyhow;
+use swww_itch_shared::message::Position;
 use tokio::{
     sync::{Mutex, mpsc},
     time::Duration,
@@ -78,13 +79,9 @@ impl WallpaperQueue {
     pub async fn rearrange_wallpaper(
         &self,
         bg: &str,
-        before_or_after: &str,
+        before_or_after: &Position,
         target_bg: &str,
     ) -> anyhow::Result<(usize, usize)> {
-        if before_or_after != "before" && before_or_after != "after" {
-            return Err(anyhow!("Invalid direction"));
-        }
-
         let i_lock = self.current_index.lock().await;
         let mut lock = self.queue.lock().await;
 
@@ -108,27 +105,26 @@ impl WallpaperQueue {
             .ok_or(anyhow!("Target background is not in queue"))?;
 
         if bg_index == target_index {
-            return Err(anyhow!("Will not rearrange wallpaper to the same position"));
+            return Err(anyhow!("Refusing to move wallpaper to the same position"));
         }
 
         match before_or_after {
-            "before" => {
+            Position::Before => {
                 // Since we are removing bg, rightward items will shift leftward.
                 // If target is rightward, we need to adjust the index
                 if target_index > bg_index {
                     target_index -= 1;
                 }
             }
-            "after" => {
+            Position::After => {
                 if target_index < bg_index {
                     target_index += 1;
                 }
             }
-            _ => unreachable!(),
         }
 
         if bg_index == target_index {
-            return Err(anyhow!("Will not rearrange wallpaper to the same position"));
+            return Err(anyhow!("Refusing to move wallpaper to the same position"));
         }
 
         let item = lock.v.remove(bg_index);

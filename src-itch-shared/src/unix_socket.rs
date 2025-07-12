@@ -12,22 +12,6 @@ pub fn socket_path() -> Result<PathBuf, VarError> {
     Ok(PathBuf::from(env::var("XDG_RUNTIME_DIR")?).join("swwwitch.sock"))
 }
 
-#[derive(Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub enum Request {
-    SwitchToBackground(String),
-    RearrangeBackground((String, String, String)),
-    GetQueue,
-}
-
-#[derive(Serialize, Deserialize, Clone)]
-#[serde(rename_all = "camelCase")]
-pub enum Response {
-    SwitchToBackground(bool),
-    RearrangeBackground((bool, usize, usize)),
-    GetQueue(Vec<String>),
-}
-
 /// Resolves once the listener is successfully bound.
 pub async fn setup_listener<REQ>() -> UnixSocket<REQ, ()>
 where
