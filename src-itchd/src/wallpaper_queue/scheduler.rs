@@ -112,4 +112,8 @@ impl SchedulerRemote {
     ) -> Result<(), mpsc::error::SendError<Command>> {
         self.command_tx.send(Command::Index(index)).await
     }
+
+    pub async fn shutdown(&self) -> Result<(), mpsc::error::SendError<Command>> {
+        self.command_tx.send(Command::Shutdown).await
+    }
 }

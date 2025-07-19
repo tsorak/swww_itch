@@ -4,6 +4,7 @@ use swww_itch_shared::unix_socket::{UnixSocketPath, setup_listener};
 
 mod cleanup;
 mod ipc;
+mod util;
 mod wallpaper_queue;
 
 use cleanup::Cleanup;
@@ -16,10 +17,14 @@ async fn main() -> anyhow::Result<()> {
         .join("backgrounds");
 
     let wallpaper_queue = WallpaperQueue::builder()
+        .with_ordered_queue()
+        .await
+        .dbg_queue()
         .with_initial_queue_from_directory(&bg_dir)
         .await
-        .dbg()
-        .build();
+        .dbg_queue()
+        .build()
+        .await;
 
     let args: Vec<String> = std::env::args().collect();
     if let Some(bg) = args.get(1).map(|s| s.to_string()) {
@@ -31,12 +36,12 @@ async fn main() -> anyhow::Result<()> {
     }
 
     let unix_socket_path = UnixSocketPath::RuntimeDir("swwwitch.sock").to_pathbuf()?;
-
     let socket = setup_listener(&unix_socket_path).await;
-
-    Cleanup { unix_socket_path }.bind_os_signals();
-
-    ipc::run(socket, wallpaper_queue).await;
+    let wq = wallpaper_queue.clone();
+    tokio::select! {
+        _ = Cleanup { unix_socket_path, wallpaper_queue: wq }.bind_os_signals() => {},
+        _ = ipc::run(socket, wallpaper_queue) => {},
+    }
 
     Ok(())
 }

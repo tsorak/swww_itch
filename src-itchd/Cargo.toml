@@ -7,3 +7,5 @@ edition = "2024"
 swww_itch_shared = { path = "../src-itch-shared" }
 tokio.workspace = true
 anyhow.workspace = true
+sqlx = { version = "0.8.6", features = ["runtime-tokio", "sqlite"] }
+serde = { version = "1.0.219", features = ["derive"] }

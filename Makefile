@@ -1,5 +1,8 @@
 INSTALL_DIR = /usr/bin
 
+devenv:
+	@fish -c "echo \"DATABASE_URL=sqlite://\$$HOME/.local/state/itch/state.db\" > .env"
+
 build_itchd:
 	@cargo build --release --bin swww-itchd
 
@@ -16,7 +19,6 @@ install_itch: build_itch
 	@sudo install -Dvm755 ./target/release/itch $(INSTALL_DIR)/itch
 
 install: install_itchd install_itch
-
 
 clean:
 	@cargo clean

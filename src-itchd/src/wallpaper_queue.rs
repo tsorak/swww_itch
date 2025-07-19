@@ -10,9 +10,11 @@ use tokio::{
 };
 
 mod builder;
+mod persistence;
 mod scheduler;
 
 pub use builder::WallpaperQueueBuilder;
+use persistence::{Sqlite, open_or_make_db};
 use scheduler as sch;
 
 #[derive(Clone)]
@@ -20,6 +22,7 @@ pub struct WallpaperQueue {
     pub queue: Arc<Mutex<Queue>>,
     pub scheduler: SchedulerRemote,
     pub current_index: Arc<Mutex<usize>>,
+    pub db: Sqlite,
 }
 
 pub struct Queue {
@@ -43,14 +46,21 @@ impl WallpaperQueue {
         WallpaperQueueBuilder::new()
     }
 
-    pub fn new(initial_queue: Vec<String>) -> Self {
+    pub async fn new(initial_queue: Vec<String>, db: Option<Sqlite>) -> Self {
         let queue = Arc::new(Mutex::new(Queue::new(Some(initial_queue))));
         let current_index = Arc::new(Mutex::new(0));
+        let db = db.unwrap_or(
+            open_or_make_db()
+                .await
+                .inspect_err(|err| eprintln!("Error: {err}"))
+                .unwrap(),
+        );
 
         Self {
             queue: queue.clone(),
             scheduler: Scheduler::start(queue, current_index.clone()),
             current_index,
+            db,
         }
     }
 
@@ -148,8 +158,6 @@ impl WallpaperQueue {
 
         drop(lock);
 
-        // TODO: If current_index is affected, update it
-
         Ok((bg_index, target_index))
     }
 }
@@ -159,5 +167,9 @@ impl Queue {
         Self {
             v: v.unwrap_or_default(),
         }
+    }
+
+    pub fn as_vec(&self) -> &Vec<String> {
+        &self.v
     }
 }
