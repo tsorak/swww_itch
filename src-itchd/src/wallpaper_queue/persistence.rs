@@ -1,10 +1,12 @@
 use tokio::fs;
 
+use swww_itch_shared::env_path::EnvPath;
+
 mod sqlite;
 pub use sqlite::Sqlite;
 
 pub async fn open_or_make_db() -> anyhow::Result<Sqlite> {
-    let db_path = crate::util::EnvPath::home(".local/state/itch/state.db")?;
+    let db_path = EnvPath::home(".local/state/itch/state.db")?;
 
     fs::create_dir_all(db_path.as_ref().parent().unwrap()).await?;
 

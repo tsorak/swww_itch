@@ -4,7 +4,6 @@ use swww_itch_shared::unix_socket::{UnixSocketPath, setup_listener};
 
 mod cleanup;
 mod ipc;
-mod util;
 mod wallpaper_queue;
 
 use cleanup::Cleanup;

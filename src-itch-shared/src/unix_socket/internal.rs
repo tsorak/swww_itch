@@ -1,14 +1,10 @@
-use std::{
-    fs,
-    io::{Read, Write},
-    os::unix::net::{UnixListener, UnixStream},
-    path::Path,
-};
+use std::{fs, path::Path, sync::Arc};
 
 use serde::{Deserialize, Serialize};
 use tokio::{
-    sync::{broadcast, mpsc},
-    task::spawn_blocking,
+    io::{AsyncReadExt, AsyncWriteExt},
+    net::{UnixListener, UnixStream},
+    sync::{Mutex, broadcast, mpsc},
 };
 
 #[derive(Default)]
@@ -55,12 +51,12 @@ impl<
         Ok(())
     }
 
-    pub fn connect<P: AsRef<Path>>(&mut self, p: P) -> anyhow::Result<()>
+    pub async fn connect<P: AsRef<Path>>(&mut self, p: P) -> anyhow::Result<()>
     where
         REQ: Serialize + Send + 'static,
         RES: for<'de> Deserialize<'de> + Clone + Send + 'static,
     {
-        let stream = UnixStream::connect(p.as_ref())?;
+        let stream = UnixStream::connect(p.as_ref()).await?;
         let _ = self.connection.insert(Connection::<REQ, RES>::new(stream));
 
         Ok(())
@@ -119,30 +115,30 @@ impl<REQ: Serialize + Send + 'static, RES: for<'de> Deserialize<'de> + Clone + S
         let (req_tx, req_rx) = mpsc::unbounded_channel::<REQ>();
         let (res_tx, _res_rx) = broadcast::channel(8);
 
-        let tx_stream = stream
-            .try_clone()
-            .expect("Failed to clone UnixStream for transmitting end");
+        let (r_stream, w_stream) = stream.into_split();
+
         let _request_handler = tokio::spawn(async move {
             let mut req_rx = req_rx;
-            let mut stream = tx_stream;
+            let mut w_stream = w_stream;
 
             loop {
                 if let Some(v) = req_rx.recv().await {
-                    let _ = stream
-                        .write_all(&serde_json::to_vec(&Message::<REQ, ()>::Request(v)).unwrap());
+                    let _ = w_stream
+                        .write_all(&serde_json::to_vec(&Message::<REQ, ()>::Request(v)).unwrap())
+                        .await;
                 }
             }
         });
 
         let res_tx2 = res_tx.clone();
 
-        let _response_handler = spawn_blocking(move || {
+        let _response_handler = tokio::spawn(async move {
             let res_tx = res_tx2;
-            let mut stream = stream;
+            let mut r_stream = r_stream;
 
             loop {
                 let mut buf = vec![0; 1024];
-                if let Ok(n_bytes) = stream.read(&mut buf) {
+                if let Ok(n_bytes) = r_stream.read(&mut buf).await {
                     let s = String::from_utf8_lossy(&buf[..n_bytes]).trim().to_string();
 
                     if let Ok(Message::Response(res)) = serde_json::from_str::<Message<(), RES>>(&s)
@@ -186,17 +182,19 @@ impl<REQ: Serialize + Send + 'static, RES: for<'de> Deserialize<'de> + Clone + S
 /// The Listener will receive messages from all connected clients and join them into a single channel.
 pub struct Listener {
     //listener: UnixListener,
-    rx: mpsc::UnboundedReceiver<(UnixStream, String)>,
+    rx: mpsc::UnboundedReceiver<(Arc<Mutex<UnixStream>>, String)>,
 }
 
 impl Listener {
     fn new(l: UnixListener) -> Self {
         let (tx, rx) = mpsc::unbounded_channel();
 
-        spawn_blocking(move || {
-            for stream in l.incoming().flatten() {
-                let tx = tx.clone();
-                spawn_blocking(move || join_messages(stream, tx));
+        tokio::spawn(async move {
+            loop {
+                if let Ok(stream) = l.accept().await {
+                    let tx = tx.clone();
+                    tokio::spawn(async move { join_messages(stream.0, tx).await });
+                }
             }
         });
 
@@ -204,14 +202,20 @@ impl Listener {
     }
 }
 
-fn join_messages(mut of: UnixStream, to: mpsc::UnboundedSender<(UnixStream, String)>) {
+async fn join_messages(
+    of: UnixStream,
+    to: mpsc::UnboundedSender<(Arc<Mutex<UnixStream>>, String)>,
+) {
+    let of = Arc::new(Mutex::new(of));
     loop {
         // Compiler seems to think this is unused
         #[allow(unused_assignments)]
         let mut string_data = String::new();
 
+        let mut lock = of.lock().await;
+
         let mut buf = vec![0; 1024];
-        match of.read(&mut buf) {
+        match lock.read(&mut buf).await {
             Ok(n_bytes) => {
                 let data = String::from_utf8_lossy(&buf[..n_bytes]).trim().to_string();
 
@@ -228,12 +232,10 @@ fn join_messages(mut of: UnixStream, to: mpsc::UnboundedSender<(UnixStream, Stri
             }
         }
 
+        drop(lock);
+
         // println!("Joining message '{string_data}' to Listener");
-        let _ = to.send((
-            of.try_clone()
-                .expect("Failed to clone socket handle for replying"),
-            string_data,
-        ));
+        let _ = to.send((of.clone(), string_data));
     }
 }
 
@@ -245,7 +247,7 @@ enum Message<REQ, RES> {
 }
 
 pub struct RequestContext<T: for<'de> Deserialize<'de>> {
-    peer: UnixStream,
+    peer: Arc<Mutex<UnixStream>>,
     _request_string: String,
     request: Option<T>,
 }
@@ -255,9 +257,12 @@ impl<T: for<'de> Deserialize<'de>> RequestContext<T> {
         self.request.take().unwrap()
     }
 
-    pub fn respond<R: Serialize>(mut self, res: R) -> anyhow::Result<()> {
-        Ok(self
-            .peer
-            .write_all(&serde_json::to_vec(&Message::<(), R>::Response(res))?)?)
+    pub async fn respond<R: Serialize>(self, res: R) -> anyhow::Result<()> {
+        let msg = serde_json::to_vec(&Message::<(), R>::Response(res))?;
+
+        let mut lock = self.peer.lock().await;
+        lock.write_all(&msg).await?;
+
+        Ok(())
     }
 }

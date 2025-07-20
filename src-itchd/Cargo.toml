@@ -9,3 +9,5 @@ tokio.workspace = true
 anyhow.workspace = true
 sqlx = { version = "0.8.6", features = ["runtime-tokio", "sqlite"] }
 serde = { version = "1.0.219", features = ["derive"] }
+
+# console-subscriber = "0.4.1"

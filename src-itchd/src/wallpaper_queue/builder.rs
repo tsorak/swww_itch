@@ -87,11 +87,6 @@ impl WallpaperQueueBuilder {
         }
     }
 
-    pub fn dbg(self) -> Self {
-        dbg!(&self);
-        self
-    }
-
     pub fn dbg_queue(self) -> Self {
         dbg!(&self.initial_queue);
         self
