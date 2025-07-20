@@ -1,12 +1,27 @@
 INSTALL_DIR = /usr/bin
+STATE_DIR = ${HOME}/.local/state/itch
+DATABASE_URL = sqlite://${STATE_DIR}/state.db
 
 devenv:
-	@fish -c "echo \"DATABASE_URL=sqlite://\$$HOME/.local/state/itch/state.db\" > .env"
+	@mkdir -p ${STATE_DIR}
+	@sqlx database setup -D ${DATABASE_URL}
+
+	@echo "DATABASE_URL=${DATABASE_URL}" > .env
+	@echo DATABASE_URL=${DATABASE_URL}
 
 build_itchd:
 	@cargo build --release --bin swww-itchd
 
+	# Setup persistent app state
+	@mkdir -p -v ${STATE_DIR}
+	@sqlx database setup -D ${DATABASE_URL}
+	# Sqlite migration info:
+	@sqlx migrate info -D ${DATABASE_URL}
+
 build_itch:
+	# Install deps
+	@bun install
+	# Build app
 	@bun run tauri build -b deb
 
 build: build_itchd build_itch
