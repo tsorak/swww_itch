@@ -23,9 +23,11 @@ impl Cleanup {
 
         let wq = self.wallpaper_queue;
 
+        let start = Instant::now();
+
         let socket = async || match std::fs::remove_file(self.unix_socket_path) {
             Ok(_) => {
-                println!("Removed socket")
+                println!("DONE. Removed socket")
             }
             Err(_) => {
                 println!("Failed to remove socket")
@@ -45,7 +47,7 @@ impl Cleanup {
                 tokio::time::sleep(Duration::from_millis(1)).await;
             }
 
-            println!("Shut down Scheduler");
+            println!("DONE. Shut down Scheduler");
         };
 
         let save_queue = async || {
@@ -61,7 +63,7 @@ impl Cleanup {
 
             wq.db.close().await;
 
-            println!("Saved user-sorted queue...");
+            println!("DONE. Saved user-sorted queue...");
         };
 
         let ((_, t1), (_, t2), (_, t3)) =
@@ -73,7 +75,12 @@ impl Cleanup {
             .map(|(name, n)| (name, n.as_micros()))
             .for_each(|(name, n)| println!("{name}: {n}µs"));
 
-        println!();
+        let end = start.elapsed();
+        println!(
+            "\nCleanup performed in {}ms ({}µs). Goodbye",
+            end.as_millis(),
+            end.as_micros()
+        );
     }
 }
 
