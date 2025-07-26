@@ -1,6 +1,8 @@
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePool};
 use sqlx::{Pool, query, query_as};
 
+pub mod table;
+
 #[derive(Debug, Clone)]
 pub struct Sqlite {
     pool: Pool<sqlx::Sqlite>,
@@ -60,6 +62,10 @@ impl Sqlite {
 
     pub async fn close(&self) {
         self.pool.close().await
+    }
+
+    pub fn pool<'a>(&'a self) -> &'a Pool<sqlx::Sqlite> {
+        &self.pool
     }
 }
 

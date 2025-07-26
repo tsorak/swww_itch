@@ -10,10 +10,13 @@ use tokio::{
 };
 
 mod builder;
+mod day_night;
 mod persistence;
+// mod playlist;
 mod scheduler;
 
 pub use builder::WallpaperQueueBuilder;
+use day_night::DayNightQueue;
 use persistence::{Sqlite, open_or_make_db};
 use scheduler as sch;
 
@@ -23,9 +26,11 @@ pub struct WallpaperQueue {
     pub scheduler: SchedulerRemote,
     pub current_index: Arc<Mutex<usize>>,
     pub db: Sqlite,
+    pub day_night_queue: DayNightQueue,
 }
 
 pub struct Queue {
+    name: Option<String>,
     v: Vec<String>,
 }
 
@@ -56,11 +61,14 @@ impl WallpaperQueue {
                 .unwrap(),
         );
 
+        let dnq = DayNightQueue::new(queue.clone(), db.clone()).await;
+
         Self {
             queue: queue.clone(),
             scheduler: Scheduler::start(queue, current_index.clone()),
             current_index,
             db,
+            day_night_queue: dnq,
         }
     }
 
@@ -165,11 +173,57 @@ impl WallpaperQueue {
 impl Queue {
     pub fn new(v: Option<Vec<String>>) -> Self {
         Self {
+            name: None,
             v: v.unwrap_or_default(),
         }
     }
 
     pub fn as_vec(&self) -> &Vec<String> {
         &self.v
+    }
+
+    /// Swaps out the current queue with "with".
+    /// Returns the previous one.
+    pub(self) async fn swap_with(&mut self, with: &SwapQueue) -> SwapQueue {
+        let prev = SwapQueue {
+            name: self.name.take(),
+            v: std::mem::take(&mut self.v),
+        };
+
+        self.name = with.name.clone();
+        self.v = with.v.clone();
+
+        prev
+    }
+}
+
+struct SwapQueue {
+    name: Option<String>,
+    v: Vec<String>,
+}
+
+impl SwapQueue {
+    pub async fn save_state(self, (day, night): &day_night::Queues, db: &Sqlite) {
+        use persistence::sqlite::table::DayNight;
+
+        if let Some(playlist) = self.name.as_deref() {
+            match playlist {
+                "DAY" | "NIGHT" => {
+                    let daytime = playlist == "DAY";
+                    db.table::<DayNight>()
+                        .insert_or_replace(&self.v, daytime)
+                        .await;
+
+                    if daytime {
+                        let _old = std::mem::replace(&mut day.lock().await.v, self.v);
+                    } else {
+                        let _old = std::mem::replace(&mut night.lock().await.v, self.v);
+                    }
+                }
+                _playlist => {
+                    todo!()
+                }
+            };
+        }
     }
 }

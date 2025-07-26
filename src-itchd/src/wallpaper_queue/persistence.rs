@@ -2,7 +2,7 @@ use tokio::fs;
 
 use swww_itch_shared::env_path::EnvPath;
 
-mod sqlite;
+pub mod sqlite;
 pub use sqlite::Sqlite;
 
 pub async fn open_or_make_db() -> anyhow::Result<Sqlite> {
