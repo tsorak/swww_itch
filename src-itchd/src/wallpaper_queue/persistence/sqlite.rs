@@ -20,6 +20,7 @@ impl Sqlite {
         })
     }
 
+    #[deprecated]
     pub async fn read_queue(&self) -> Vec<String> {
         use row_types::*;
 
@@ -35,6 +36,7 @@ impl Sqlite {
         .collect()
     }
 
+    #[deprecated]
     pub async fn write_queue<'a>(
         &self,
         queue: &'a Vec<String>,

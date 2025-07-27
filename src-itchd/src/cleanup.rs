@@ -5,7 +5,7 @@ use tokio::{
     time::{Duration, Instant},
 };
 
-use crate::wallpaper_queue::WallpaperQueue;
+use crate::wallpaper_queue::{WallpaperQueue, table};
 
 pub struct Cleanup {
     pub unix_socket_path: PathBuf,
@@ -56,9 +56,14 @@ impl Cleanup {
             println!("Saving user-sorted queue...");
 
             let queue = wq.queue.lock().await;
-            match wq.db.write_queue(queue.as_vec()).await {
-                Ok(_) => println!("Saved user-sorted queue"),
-                Err(err) => eprintln!("Failed to write some rows to sqlite database: {:#?}", err),
+            match wq.db.table::<table::Queue>().replace_with(&*queue).await {
+                (Ok(_saved_name), Ok(_cleared_previous), Some(Ok(_saved_queue))) => {
+                    println!("Saved user-sorted queue")
+                }
+                (_, _, Some(Err(err))) => {
+                    eprintln!("Failed to write some rows to sqlite database: {:#?}", err)
+                }
+                err => eprintln!("Error saving queue: {err:#?}"),
             }
 
             wq.db.close().await;
