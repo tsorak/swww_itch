@@ -20,6 +20,19 @@ impl Sqlite {
         })
     }
 
+    pub async fn get_all_queues(&self) -> Result<Vec<row_types::PlaylistEntry>, sqlx::Error> {
+        query_as("
+            SELECT path, play_order, 'ALL' AS playlist FROM all_backgrounds
+            UNION ALL
+            SELECT path, play_order, CASE daytime WHEN 1 THEN 'DAY' WHEN 0 THEN 'NIGHT' END AS playlist FROM day_night_playlist
+            UNION ALL
+            SELECT path, play_order, NULL AS playlist FROM queue
+            ORDER BY playlist, play_order
+            ")
+        .fetch_all(self.pool())
+        .await
+    }
+
     #[deprecated]
     pub async fn read_queue(&self) -> Vec<String> {
         use row_types::*;
@@ -84,6 +97,14 @@ pub mod row_types {
     #[derive(Debug, FromRow, Deserialize)]
     pub struct QueuePathOnly {
         pub path: String,
+    }
+
+    #[derive(Debug, FromRow, Deserialize)]
+    pub struct PlaylistEntry {
+        pub path: String,
+        /// sqlite needs this for ORDER BY, we shouldn't have to sort by this in Rust.
+        pub play_order: i64,
+        pub playlist: Option<String>,
     }
 }
 

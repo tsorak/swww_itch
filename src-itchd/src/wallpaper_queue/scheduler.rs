@@ -13,13 +13,12 @@ pub enum Command {
 }
 
 impl Scheduler {
-    pub fn start(queue: Arc<Mutex<Queue>>, current_index: Arc<Mutex<usize>>) -> SchedulerRemote {
+    pub fn start(queue: Queue) -> SchedulerRemote {
         let (command_tx, command_rx) = mpsc::channel(8);
         let scheduler = Scheduler {
             queue,
             command_rx,
             interval: Duration::from_secs(60 * 60),
-            current_index,
         };
 
         tokio::spawn(scheduler.run());
@@ -68,7 +67,7 @@ impl Scheduler {
         match command {
             Command::Interval(interval) => self.interval = interval,
             Command::Index(index) => {
-                *self.current_index.lock().await = index;
+                *self.queue.current_index.lock().await = index;
                 let _ = end_timeout().await;
             }
             Command::Shutdown => return ControlFlow::Break(()),
@@ -77,30 +76,33 @@ impl Scheduler {
     }
 
     async fn do_interval_task(&self) {
-        let queue = self.queue.lock().await;
+        let queues = self.queue.internal.map.lock().await;
+        let current_playlist = self.queue.current_playlist.lock().await;
 
-        let mut index = self.current_index.lock().await;
+        let mut index = self.queue.current_index.lock().await;
 
-        let maybe_wallpaper = {
-            if let Some(wallpaper) = queue.v.get(*index) {
-                Some(wallpaper)
-            } else if let Some(wallpaper) = queue.v.last() {
-                Some(wallpaper)
-            } else {
-                None
+        if let Some(playlist) = queues.get(&*current_playlist) {
+            let maybe_wallpaper = {
+                if let Some(wallpaper) = playlist.get(*index) {
+                    Some(wallpaper)
+                } else if let Some(wallpaper) = playlist.last() {
+                    Some(wallpaper)
+                } else {
+                    None
+                }
+            };
+
+            if let Some(wallpaper) = maybe_wallpaper {
+                println!("[wq::scheduler.rs] {wallpaper}");
+
+                swww_ffi::set_background(wallpaper).await;
             }
-        };
 
-        if let Some(wallpaper) = maybe_wallpaper {
-            println!("[wq::scheduler.rs] {wallpaper}");
-
-            swww_ffi::set_background(wallpaper).await;
-        }
-
-        if *index >= queue.v.len() - 1 {
-            *index = 0;
-        } else {
-            *index += 1;
+            if *index >= playlist.len() - 1 {
+                *index = 0;
+            } else {
+                *index += 1;
+            }
         }
     }
 }

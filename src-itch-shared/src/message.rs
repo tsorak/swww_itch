@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use serde::{Deserialize, Serialize};
 
 pub use rearrange::Position;
@@ -8,6 +10,8 @@ pub enum Request {
     SwitchToBackground(String),
     RearrangeBackground((String, Position, String)),
     GetQueue,
+    SetDayNightEnabled(bool),
+    IsDayNightEnabled,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -15,7 +19,9 @@ pub enum Request {
 pub enum Response {
     SwitchToBackground(bool),
     RearrangeBackground((bool, usize, usize)),
-    GetQueue(Vec<String>),
+    GetQueue(Vec<(String, Vec<Arc<String>>)>),
+    SetDayNightEnabled(bool),
+    IsDayNightEnabled(bool),
 }
 
 impl Request {

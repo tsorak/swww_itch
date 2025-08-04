@@ -11,7 +11,7 @@ pub struct CronJob {
 
 impl CronJob {
     pub fn new(
-        active_queue: Arc<Mutex<Queue>>,
+        active_queue: Queue,
         (day, night): (cron::Schedule, cron::Schedule),
         queues: (Arc<Mutex<SwapQueue>>, Arc<Mutex<SwapQueue>>),
         db: Sqlite,
@@ -27,7 +27,7 @@ impl CronJob {
 }
 
 async fn run(
-    active_queue: Arc<Mutex<Queue>>,
+    active_queue: Queue,
     (day, night): (cron::Schedule, cron::Schedule),
     queues: (Arc<Mutex<SwapQueue>>, Arc<Mutex<SwapQueue>>),
     db: Sqlite,
@@ -55,7 +55,7 @@ async fn run(
 pub async fn switch_active_queue_to(
     spec: &'static str,
     dnqs: &(Arc<Mutex<SwapQueue>>, Arc<Mutex<SwapQueue>>),
-    active_queue: &Arc<Mutex<Queue>>,
+    active_queue: &Queue,
     db: &Sqlite,
 ) {
     let q = match spec {

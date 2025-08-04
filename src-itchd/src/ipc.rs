@@ -40,10 +40,37 @@ pub async fn run(mut listener: UnixSocket<Request, ()>, wq: WallpaperQueue) {
             Request::GetQueue => {
                 println!("Received job: GetQueue");
 
-                let queue = wq.get_queue().await;
+                let queue = wq
+                    .get_queue()
+                    .await
+                    .into_iter()
+                    .map(|(name, images)| (name.to_string(), images))
+                    .collect();
 
                 let _ = c
                     .respond(Response::GetQueue(queue))
+                    .await
+                    .inspect_err(|err| eprintln!("Failed to send response: {err}"));
+            }
+            Request::SetDayNightEnabled(enabled) => {
+                let new_state = if let Ok(_changed) = wq.day_night_queue.set_enabled(enabled).await
+                {
+                    enabled
+                } else {
+                    // TODO: respond with error
+                    false
+                };
+
+                let _ = c
+                    .respond(Response::SetDayNightEnabled(new_state))
+                    .await
+                    .inspect_err(|err| eprintln!("Failed to send response: {err}"));
+            }
+            Request::IsDayNightEnabled => {
+                let enabled = wq.day_night_queue.is_enabled().await;
+
+                let _ = c
+                    .respond(Response::IsDayNightEnabled(enabled))
                     .await
                     .inspect_err(|err| eprintln!("Failed to send response: {err}"));
             }

@@ -53,10 +53,9 @@ impl Cleanup {
         let save_queue = async || {
             let wq = wq.clone();
 
-            println!("Saving user-sorted queue...");
+            println!("Saving playlists...");
 
-            let queue = wq.queue.lock().await;
-            match wq.db.table::<table::Queue>().replace_with(&*queue).await {
+            match wq.db.table::<table::Queue>().replace_with(&wq.queue).await {
                 (Ok(_saved_name), Ok(_cleared_previous), Some(Ok(_saved_queue))) => {
                     println!("Saved user-sorted queue")
                 }

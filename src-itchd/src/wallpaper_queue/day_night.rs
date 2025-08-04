@@ -19,7 +19,7 @@ pub type Queues = (Arc<Mutex<SwapQueue>>, Arc<Mutex<SwapQueue>>);
 pub struct DayNightQueue {
     // all_backgrounds: &'a Arc<Mutex<Vec<String>>>,
     enabled: Arc<Mutex<bool>>,
-    active_queue: Arc<Mutex<Queue>>,
+    active_queue: Queue,
     cron: Arc<Mutex<Option<cron_job::CronJob>>>,
     day_night_queue: (Arc<Mutex<SwapQueue>>, Arc<Mutex<SwapQueue>>),
     schedule: (Arc<Mutex<cron::Schedule>>, Arc<Mutex<cron::Schedule>>),
@@ -27,7 +27,7 @@ pub struct DayNightQueue {
 }
 
 impl DayNightQueue {
-    pub async fn new(active_queue: Arc<Mutex<Queue>>, db: Sqlite) -> Self {
+    pub async fn new(active_queue: Queue, db: Sqlite) -> Self {
         let schedule = {
             let day = cron::Schedule::from_str("0 0 6 * * * *").unwrap();
             let night = cron::Schedule::from_str("0 0 18 * * * *").unwrap();
